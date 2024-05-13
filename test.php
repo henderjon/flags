@@ -4,7 +4,7 @@ require_once 'vendor/autoload.php';
 
 use Flags\FlagDocInterface;
 
-class getopt implements FlagDocInterface {
+class options implements FlagDocInterface {
 	public string $foo;
 	public int $bar = 5;
 	public bool $fizz = false;
@@ -24,22 +24,8 @@ class getopt implements FlagDocInterface {
 	}
 }
 
-$f = new Flags\Flags(new getopt);
-$args = $f->parse($argv);
+$f = new Flags\Flags(new options);
+$f->parse($argv);
+$options = $f->asObject();
 
-
-
-$foo = "";
-$bar = "";
-$fizz = "";
-$buzz = "";
-$f->assignByRef("foo", $foo);
-$f->assignByRef("bar", $bar);
-$f->assignByRef("fizz", $fizz);
-$f->assignByRef("buzz", $buzz);
-drop(
-	$foo,
-	$bar,
-	$fizz,
-	$buzz,
-);
+drop($options->foo);

@@ -4,8 +4,9 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8dc4fc10bd5d8eabc2aa6a3eae08ca12",
-    "packages": [
+    "content-hash": "0e3af64a1363cbcebbd3b4a7b992ebb7",
+    "packages": [],
+    "packages-dev": [
         {
             "name": "henderjon/drop",
             "version": "v1.3.0",
@@ -53,13 +54,14 @@
             "time": "2015-11-04T13:22:44+00:00"
         }
     ],
-    "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
+    "platform": {
+        "php": ">=8.0"
+    },
     "platform-dev": [],
     "plugin-api-version": "2.3.0"
 }

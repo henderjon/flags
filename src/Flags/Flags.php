@@ -98,4 +98,24 @@ class Flags {
 
 		$arg = $this->argv[$name];
 	}
+
+	public function asObject():object{
+		if(is_null($this->argv)){
+			throw new FlagsException("flags are not yet parsed");
+		}
+
+		return new class($this->argv) {
+			public function __construct(private array $argv){}
+			public function __get(string $name):mixed{
+				if( !array_key_exists($name, $this->argv) ){
+					throw new FlagsException("flag '{$name}' not found");
+				}
+
+				return $this->argv[$name];
+			}
+			public function __isset(string $name):bool{
+				return array_key_exists($name, $this->argv);
+			}
+		};
+	}
 }
