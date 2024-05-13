@@ -1,40 +1,45 @@
 <?php
 
 require_once 'vendor/autoload.php';
-require_once 'Args.php';
 
-// $f = function(
-// 	public string $foo,
-// 	public int $bar = 5,
-// 	public bool $fizz = false,
-// ):void{};
+use Flags\FlagDocInterface;
 
-class ags {
+class getopt implements FlagDocInterface {
 	public string $foo;
 	public int $bar = 5;
 	public bool $fizz = false;
-	private string $buzz;
+	public string $buzz;
 
 	public function buzz(string $v):string{
 		return strtoupper($v);
 	}
 
-	public function doc(){
-		echo "This is a doc method" . PHP_EOL;
-
+	public function doc():string{
+		$str = "Usage: php test.php [options]" . PHP_EOL.PHP_EOL;
+		$str .= "-foo (string) \n  'foo' is an arg" . PHP_EOL;
+		$str .= "-bar (int) = 5" . PHP_EOL;
+		$str .= "-fizz (bool) = false" . PHP_EOL;
+		$str .= "-buzz (string) " . PHP_EOL;
+		return $str;
 	}
 }
 
-$args = (new Args(new ags))->parse($argv);
+$f = new Flags\Flags(new getopt);
+$args = $f->parse($argv);
 
-drop($args);
 
-// foreach ($params as $param) {
-// 	echo $param->getName() . PHP_EOL;
-// 	echo $param->getType() . PHP_EOL;
-// 	echo $param->isOptional() . PHP_EOL;
-// 	if( $param->isDefaultValueAvailable() ){
-// 		echo $param->getDefaultValue() . PHP_EOL;
-// 	}
-// 	echo PHP_EOL;
-// }
+
+$foo = "";
+$bar = "";
+$fizz = "";
+$buzz = "";
+$f->assignByRef("foo", $foo);
+$f->assignByRef("bar", $bar);
+$f->assignByRef("fizz", $fizz);
+$f->assignByRef("buzz", $buzz);
+drop(
+	$foo,
+	$bar,
+	$fizz,
+	$buzz,
+);
