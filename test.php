@@ -13,9 +13,15 @@ class ags {
 	public string $foo;
 	public int $bar = 5;
 	public bool $fizz = false;
+	private string $buzz;
 
-	public function buzz($v){
+	public function buzz(string $v):string{
 		return strtoupper($v);
+	}
+
+	public function doc(){
+		echo "This is a doc method" . PHP_EOL;
+
 	}
 }
 

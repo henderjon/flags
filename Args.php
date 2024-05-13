@@ -2,55 +2,60 @@
 
 class Args {
 	public function __construct(
-		private readonly \Closure $fn,
+		private readonly object $cl,
 	) {}
 
 	public function parse(array $args): array {
-		$refFunction = new ReflectionFunction($this->fn);
-
+		$refObj = new ReflectionObject($this->cl);
 		$args = $this->preProcessArgs($args);
 
-		$paramsByName = [];
-		foreach ($refFunction->getParameters() as $param) {
-			$paramsByName[$param->getName()] = $param;
+		$argv = [];
+		foreach ($refObj->getProperties() as $param) {
+			$argv[$param->getName()] = $this->populateParam($this->cl, $param, $args);
+		}
+		// foreach ($refObj->getMethods() as $method) {
+		// 	$argv[$param->getName()] = $this->populateMethod($this->cl, $method, $args);
+		// }
+		foreach (array_keys($args) as $val) {
+			try{
+				$method = $refObj->getMethod($val);
+				$argv[$param->getName()] = $this->populateMethod($this->cl, $method, $args);
+			}catch(ReflectionException $e){
+				// throw new Exception("Invalid method: {$val}");
+			}
 		}
 
-		return $this->populateParams($paramsByName, $args);
+		return $argv;
 	}
 
-	private function populateParams(array $params, array $givenArgs):array{
-		$argv = [];
-		foreach ($params as $param) {
-			if( !array_key_exists($param->getName(), $givenArgs) ){
-				if( !$param->isOptional() ){
-					throw new Exception("Missing required parameter: {$param->getName()}");
-				}
-
-				if($param->isDefaultValueAvailable()){
-					$argv[$param->getName()] = $param->getDefaultValue();
-				}
-				continue;
+	private function populateParam(object $obj, ReflectionProperty $param, array $givenArgs):mixed{
+		if( !array_key_exists($param->getName(), $givenArgs) ){
+			if( !$param->hasDefaultValue() ){
+				throw new Exception("Missing required parameter: {$param->getName()}");
 			}
 
-			$type = $param->getType();
-			if(!$type->isBuiltin()){
-				throw new Exception("Unsupported type: {$param->getType()}");
-			}else if($this->isCallable($param)){
-				$v = $param($givenArgs[$param->getName()]);
-			}else{
-				$v = $givenArgs[$param->getName()];
-				match($type->getName()){
-					"boolean", "bool",
-					"integer", "int",
-					"float", "double",
-					"string" => settype($v, $type->getName()),
-					default => throw new Exception("Unsupported type: {$type->getName()}"),
-				};
-			}
-
-			$argv[$param->getName()] = $v;
+			return $argv[$param->getName()] = $param->getValue($obj);
 		}
-		return $argv;
+
+		$type = $param->getType();
+		$v = $givenArgs[$param->getName()];
+		match($type->getName()){
+			"boolean", "bool",
+			"integer", "int",
+			"float", "double",
+			"string" => settype($v, $type->getName()),
+			default => throw new Exception("Unsupported type: {$type->getName()}"),
+		};
+
+		return $v;
+	}
+
+	private function populateMethod(object $obj, ReflectionMethod $method, array $givenArgs):mixed{
+		// if( !array_key_exists($method->getName(), $givenArgs) ){
+		// 	throw new Exception("Missing required parameter: {$method->getName()}");
+		// }
+
+		return $method->invoke($obj, $givenArgs[$method->getName()]);
 	}
 
 	private function preProcessArgs(array $args):array{
