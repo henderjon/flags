@@ -10,7 +10,7 @@ class Flags {
 		private readonly FlagDocInterface $cl,
 	) {}
 
-	public function parse(array $args): array {
+	public function parse(array $args): object {
 		if(!is_null($this->argv)){
 			return $this->argv;
 		}
@@ -43,7 +43,22 @@ class Flags {
 			}
 		}
 
-		return $this->argv;
+		return new class($this->argv) {
+			public function __construct(private readonly array $argv){}
+			public function __get(string $name):mixed{
+				if( !array_key_exists($name, $this->argv) ){
+					throw new FlagsException("flag '{$name}' not found");
+				}
+
+				return $this->argv[$name];
+			}
+			public function __isset(string $name):bool{
+				return array_key_exists($name, $this->argv);
+			}
+			public function getAll():array{
+				return $this->argv;
+			}
+		};
 	}
 
 	private function populateParam(object $obj, \ReflectionProperty $param, array $givenArgs):mixed{
@@ -87,35 +102,15 @@ class Flags {
 		}
 	}
 
-	public function assignByRef(string $name, mixed &$arg):void{
-		if(is_null($this->argv)){
-			throw new FlagsException("flags are not yet parsed");
-		}
+	// public function assignByRef(string $name, mixed &$arg):void{
+	// 	if(is_null($this->argv)){
+	// 		throw new FlagsException("flags are not yet parsed");
+	// 	}
 
-		if( !array_key_exists($name, $this->argv) ){
-			throw new FlagsException("flag '{$name}' not found");
-		}
+	// 	if( !array_key_exists($name, $this->argv) ){
+	// 		throw new FlagsException("flag '{$name}' not found");
+	// 	}
 
-		$arg = $this->argv[$name];
-	}
-
-	public function asObject():object{
-		if(is_null($this->argv)){
-			throw new FlagsException("flags are not yet parsed");
-		}
-
-		return new class($this->argv) {
-			public function __construct(private array $argv){}
-			public function __get(string $name):mixed{
-				if( !array_key_exists($name, $this->argv) ){
-					throw new FlagsException("flag '{$name}' not found");
-				}
-
-				return $this->argv[$name];
-			}
-			public function __isset(string $name):bool{
-				return array_key_exists($name, $this->argv);
-			}
-		};
-	}
+	// 	$arg = $this->argv[$name];
+	// }
 }

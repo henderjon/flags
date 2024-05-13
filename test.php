@@ -25,7 +25,6 @@ class options implements FlagDocInterface {
 }
 
 $f = new Flags\Flags(new options);
-$f->parse($argv);
-$options = $f->asObject();
+$options = $f->parse($argv);
 
 drop($options->foo);
