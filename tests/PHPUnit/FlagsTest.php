@@ -46,7 +46,7 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 
 	function test_parse(){
 
-		$c = new class() implements \Flags\FlagDocInterface{
+		$c = new class(){
 			private string $foo;
 			private string $fizz;
 			private bool $soup;
@@ -60,11 +60,11 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 		$given = ["script-name", "-foo", "bar", "-fizz=buzz", "-soup", "-taco", "7"];
 
 		$result = (new \Flags\Flags($c))->parse($given);
-		$this->assertEquals("bar", $result->foo);
-		$this->assertEquals("buzz", $result->fizz);
-		$this->assertEquals(true, $result->soup);
-		$this->assertEquals(7, $result->taco);
-		$this->assertEquals(5, $result->soup);
+		$this->assertSame("bar", $result->foo);
+		$this->assertSame("buzz", $result->fizz);
+		$this->assertSame(true, $result->soup);
+		$this->assertSame(7, $result->taco);
+		$this->assertSame(5, $result->burrito);
 	}
 
 }
