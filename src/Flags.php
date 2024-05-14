@@ -78,7 +78,7 @@ class Flags {
 				throw new FlagsException("missing required parameter: {$param->getName()}");
 			}
 
-			return $argv[$param->getName()] = $param->getValue($obj);
+			return $param->getValue($obj);
 		}
 
 		$type = $param->getType();
@@ -100,6 +100,10 @@ class Flags {
 		$final = [];
 		$previous = null;
 		while( $current = array_shift($args) ){
+
+			if($current == "-help" || $current == "--help"){
+				throw new FlagsException("!help requested");
+			}
 
 			// pairs with equal sign
 			if(false !== ($pos = strpos($current, "="))){
