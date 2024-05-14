@@ -94,16 +94,70 @@ class Flags {
 	}
 
 	private function preProcessArgs(array $args):array{
-		$args = array_slice($args, 1);
-		if(count($args) % 2 !== 0){
-			throw new FlagsException("missing value for flag(s); must be in key-value pairs");
-		}
+		$args = array_slice($args, 1); // remove script name
 
-		$clean = [];
-		for($n = 0; $n < count($args); $n++){
-			$clean[ltrim($args[$n], "-")] = $args[$n+=1];
+		$final = [];
+		$previous = null;
+		while( $current = array_shift($args) ){
+
+			// pairs with equal sign
+			if(false !== ($pos = strpos($current, "="))){
+				$key = substr($current, 0, $pos);
+				$final[ltrim($key, "-")] = substr($current, ($pos + 1));
+				continue;
+			}
+
+			if(str_starts_with($current, "-")){
+				// spaced bool
+				if(empty($previous) || (!empty($previous) && str_starts_with($previous, "-"))){
+					$final[ltrim($current, "-")] = true;
+				}
+
+				$previous = $current;
+				continue;
+			}
+
+			// spaced value
+			if(!empty($previous) && str_starts_with($previous, "-")){
+				$final[ltrim($previous, "-")] = $current;
+				$previous = null;
+				continue;
+			}
+
+			// if(str_starts_with($current, "-") && !empty($previous)){
+			// 	$previous = $current;
+			// 	continue;
+			// }
+			// $key = trim($arg, " -");
+			// $final[$key] = false;
+
+			// if(false !== ($pos = strpos($arg, "="))){
+			// 	$key         = substr($arg, 0, $pos);
+			// 	$final[$key] = substr($arg, ($pos + 1));
+			// 	continue;
+			// }
+
+			// if( in_array($arg, $values) ){
+			// 	$final[$arg] = array_shift($_argv);
+			// 	continue;
+			// }
+
+			// if( in_array($arg, $flags) ){
+			// 	$final[$arg] = true;
+			// 	continue;
+			// }
 		}
-		return $clean;
+		return $final;
+
+		// if(count($args) % 2 !== 0){
+		// 	throw new FlagsException("missing value for flag(s); must be in key-value pairs");
+		// }
+
+		// $clean = [];
+		// for($n = 0; $n < count($args); $n++){
+		// 	$clean[ltrim($args[$n], "-")] = $args[$n+=1];
+		// }
+		// return $clean;
 	}
 
 	private function printDoc(\ReflectionObject $refObj){
@@ -112,15 +166,4 @@ class Flags {
 		}
 	}
 
-	// public function assignByRef(string $name, mixed &$arg):void{
-	// 	if(is_null($this->argv)){
-	// 		throw new FlagsException("flags are not yet parsed");
-	// 	}
-
-	// 	if( !array_key_exists($name, $this->argv) ){
-	// 		throw new FlagsException("flag '{$name}' not found");
-	// 	}
-
-	// 	$arg = $this->argv[$name];
-	// }
 }
