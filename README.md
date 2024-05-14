@@ -1,4 +1,4 @@
 # flags
 
-For example usage, see example/example.php
+For example usage, see the [example](example/example.php)
 
