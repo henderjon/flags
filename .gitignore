@@ -1,3 +1,2 @@
 vendor/*
-*/vendor/*
-example/composer.lock
+example/*

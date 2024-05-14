@@ -3,9 +3,8 @@
 ## simple usage:
 
 ```php
-use Flags\FlagDocInterface;
 
-class opts implements FlagDocInterface {
+class opts implements Flags\FlagDocInterface {
 	public readonly string $dir;
 
 	public function doc(): string {
@@ -19,9 +18,8 @@ $options = (new Flags\Flags(new opts))->parse($argv);
 ## not simple usage:
 
 ```php
-use Flags\FlagDocInterface;
 
-class opts implements FlagDocInterface {
+class opts implements Flags\FlagDocInterface {
 	public readonly string $dir;
 	public readonly string $upper;
 

@@ -2,6 +2,9 @@
 
 namespace Flags;
 
+/**
+ * Flags is a simple command-line flag parser.
+ */
 class Flags {
 	private const DOC_METHOD_NAME = "doc";
 	private ?array $argv = null;
@@ -10,6 +13,13 @@ class Flags {
 		private readonly FlagDocInterface $cl,
 	) {}
 
+	/**
+	 * Parse the given arguments and return an object with the parsed flags. In
+	 * Practice, this method should accept $argv from the main script.
+	 *
+	 * @param array $args
+	 * @return object
+	 */
 	public function parse(array $args): object {
 		if(!is_null($this->argv)){
 			return $this->argv;
