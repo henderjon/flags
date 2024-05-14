@@ -2,15 +2,16 @@
 
 namespace Flags;
 
+use Flags\FlagsAttributes\DocString;
+
 /**
  * Flags is a simple command-line flag parser.
  */
 class Flags {
-	private const DOC_METHOD_NAME = "doc";
 	private ?array $argv = null;
 
 	public function __construct(
-		private readonly FlagDocInterface $cl,
+		private readonly object $cl,
 	) {}
 
 	/**
@@ -31,7 +32,7 @@ class Flags {
 			$args = $this->preProcessArgs($args);
 		}catch(FlagsException $e){
 			echo $e->getMessage() . PHP_EOL;
-			$this->printDoc($refObj);
+			$this->printAttrs($refObj);
 			exit(1);
 		}
 
@@ -41,7 +42,7 @@ class Flags {
 				$this->argv[$param->getName()] = $this->populateParam($this->cl, $param, $args);
 			}catch(FlagsException $e){
 				echo $e->getMessage() . PHP_EOL;
-				$this->printDoc($refObj);
+				$this->printAttrs($refObj);
 				exit(1);
 			}
 		}
@@ -128,10 +129,52 @@ class Flags {
 		return $final;
 	}
 
-	private function printDoc(\ReflectionObject $refObj){
-		if( $refObj->implementsInterface(FlagDocInterface::class) ){
-			echo PHP_EOL . $this->cl->{self::DOC_METHOD_NAME}() . PHP_EOL;
+	private function printAttrs(\ReflectionObject $refObj){
+		$doc = [];
+		$attr = $refObj->getAttributes(DocString::class);
+		if( !empty($attr) ){
+			$doc["usage"] = PHP_EOL."{$attr[0]->newInstance()->doc}";
+		}else{
+			$doc["usage"] = PHP_EOL."!no usage provided";
 		}
+
+		foreach ($refObj->getProperties() as $param) {
+			$default = "";
+			if($param->hasDefaultValue()){
+				if($param->getType()->getName() == "bool"){
+					$default = "default: ".($param->getDefaultValue() ? "true" : "false");
+				}else{
+					$default = "default: {$param->getDefaultValue()}";
+				}
+			}
+
+			$docString = "!no documentation provided";
+			$attr = $param->getAttributes(DocString::class);
+			if( !empty($attr) ){
+				$docString = $attr[0]->newInstance()->doc;
+			}
+
+			$doc[$param->getName()] = sprintf(
+				"-%s (%s) %s \n  %s",
+				$param->getName(),
+				$param->getType()->getName(),
+				$default,
+				$docString,
+			);
+		}
+
+		foreach ($refObj->getMethods() as $method) {
+			$docString = "";
+			$attr = $method->getAttributes(DocString::class);
+			if( !empty($attr) ){
+				$docString = "\n  {$attr[0]->newInstance()->doc}";
+			}
+
+			if(array_key_exists($method->getName(), $doc)){
+				$doc[$method->getName()] .= $docString;
+			}
+		}
+		echo implode(PHP_EOL.PHP_EOL, $doc).PHP_EOL;
 	}
 
 }
