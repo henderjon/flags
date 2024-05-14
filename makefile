@@ -5,7 +5,7 @@ check:
 
 .PHONY: phpunit
 phpunit:
-	XDEBUG_MODE=coverage vendor/bin/phpunit --bootstrap vendor/autoload.php
+	vendor/bin/phpunit --bootstrap vendor/autoload.php
 
 .PHONY: test
 test: check phpunit

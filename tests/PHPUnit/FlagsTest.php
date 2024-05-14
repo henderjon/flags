@@ -47,11 +47,11 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 	function test_parse(){
 
 		$c = new class(){
-			private string $foo;
-			private string $fizz;
-			private bool $soup;
-			private int $taco;
-			private int $burrito = 5;
+			public string $foo;
+			public string $fizz;
+			public bool $soup;
+			public int $taco;
+			public int $burrito = 5;
 			public function doc():string{
 				return "this is a test";
 			}
@@ -60,11 +60,18 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 		$given = ["script-name", "-foo", "bar", "-fizz=buzz", "-soup", "-taco", "7"];
 
 		$result = (new \Flags\Flags($c))->parse($given);
+		// check the return value
 		$this->assertSame("bar", $result->foo);
 		$this->assertSame("buzz", $result->fizz);
 		$this->assertSame(true, $result->soup);
 		$this->assertSame(7, $result->taco);
 		$this->assertSame(5, $result->burrito);
+		// check the reference
+		$this->assertSame("bar", $c->foo);
+		$this->assertSame("buzz", $c->fizz);
+		$this->assertSame(true, $c->soup);
+		$this->assertSame(7, $c->taco);
+		$this->assertSame(5, $c->burrito);
 	}
 
 }

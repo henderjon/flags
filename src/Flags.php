@@ -39,7 +39,7 @@ class Flags {
 		$this->argv = [];
 		foreach ($refObj->getProperties() as $param) {
 			try {
-				$this->argv[$param->getName()] = $this->populateParam($this->cl, $param, $args);
+				$param->setValue($this->cl, $this->getParameterValue($this->cl, $param, $args));
 			}catch(FlagsException $e){
 				echo $e->getMessage() . PHP_EOL;
 				$this->printAttrs($refObj);
@@ -50,29 +50,19 @@ class Flags {
 		foreach (array_keys($args) as $val) {
 			if( $refObj->hasMethod($val) ){
 				$method = $refObj->getMethod($val);
-				$this->argv[$param->getName()] = $method->invoke($this->cl, $args[$method->getName()]);
+				try {
+					$param = $refObj->getProperty($method->getName());
+					$param->setValue($this->cl, $method->invoke($this->cl, $args[$method->getName()]));
+				}catch(\ReflectionException $e){
+					// ignore property not found
+				}
 			}
 		}
 
-		return new class($this->argv) {
-			public function __construct(private readonly array $argv){}
-			public function __get(string $name):mixed{
-				if( !array_key_exists($name, $this->argv) ){
-					throw new FlagsException("flag '{$name}' not found");
-				}
-
-				return $this->argv[$name];
-			}
-			public function __isset(string $name):bool{
-				return array_key_exists($name, $this->argv);
-			}
-			public function getAll():array{
-				return $this->argv;
-			}
-		};
+		return $this->cl;
 	}
 
-	private function populateParam(object $obj, \ReflectionProperty $param, array $givenArgs):mixed{
+	private function getParameterValue(object $obj, \ReflectionProperty $param, array $givenArgs):mixed{
 		if( !array_key_exists($param->getName(), $givenArgs) ){
 			if( !$param->hasDefaultValue() ){
 				throw new FlagsException("missing required parameter: {$param->getName()}");
