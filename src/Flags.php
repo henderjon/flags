@@ -124,40 +124,8 @@ class Flags {
 				continue;
 			}
 
-			// if(str_starts_with($current, "-") && !empty($previous)){
-			// 	$previous = $current;
-			// 	continue;
-			// }
-			// $key = trim($arg, " -");
-			// $final[$key] = false;
-
-			// if(false !== ($pos = strpos($arg, "="))){
-			// 	$key         = substr($arg, 0, $pos);
-			// 	$final[$key] = substr($arg, ($pos + 1));
-			// 	continue;
-			// }
-
-			// if( in_array($arg, $values) ){
-			// 	$final[$arg] = array_shift($_argv);
-			// 	continue;
-			// }
-
-			// if( in_array($arg, $flags) ){
-			// 	$final[$arg] = true;
-			// 	continue;
-			// }
 		}
 		return $final;
-
-		// if(count($args) % 2 !== 0){
-		// 	throw new FlagsException("missing value for flag(s); must be in key-value pairs");
-		// }
-
-		// $clean = [];
-		// for($n = 0; $n < count($args); $n++){
-		// 	$clean[ltrim($args[$n], "-")] = $args[$n+=1];
-		// }
-		// return $clean;
 	}
 
 	private function printDoc(\ReflectionObject $refObj){

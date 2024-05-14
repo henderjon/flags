@@ -1,0 +1,32 @@
+TODO
+[√] handle bools
+
+```
+function simple_scan_args(array $_argv, array $values, array $flags = array()){
+
+	// $values = array_fill_keys($values, false);
+	$final = array_fill_keys($flags, false);
+
+	while( $arg = array_shift($_argv) ){
+		if
+		$arg = trim($arg, " -");
+
+		if(false !== ($pos = strpos($arg, "="))){
+			$key         = substr($arg, 0, $pos);
+			$final[$key] = substr($arg, ($pos + 1));
+			continue;
+		}
+
+		if( in_array($arg, $values) ){
+			$final[$arg] = array_shift($_argv);
+			continue;
+		}
+
+		if( in_array($arg, $flags) ){
+			$final[$arg] = true;
+			continue;
+		}
+	}
+	return $final;
+}
+```
