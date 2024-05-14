@@ -13,7 +13,8 @@ class opts implements FlagDocInterface {
 	}
 }
 
-$options = (new Flags\Flags(new opts))->parse($argv);```
+$options = (new Flags\Flags(new opts))->parse($argv);
+```
 
 ## not simple usage:
 
@@ -33,4 +34,5 @@ class opts implements FlagDocInterface {
 	}
 }
 
-$options = (new Flags\Flags(new opts))->parse($argv);```
+$options = (new Flags\Flags(new opts))->parse($argv);
+```
