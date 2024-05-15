@@ -45,6 +45,7 @@ class Flags {
 				exit(1);
 			}catch(\Throwable $e){ // this should catch errors thrown by the shadow method
 				// echo $e->getMessage() . PHP_EOL;
+				// this error is long and verbose because the gotcha here is that contagious nullability of complex types' shadow methods
 				echo "missing function to convert value for -{$param->getName()} \nensure all types (including defaults) match \nif using nullables, ensure function accepts/returns nullable types" . PHP_EOL;
 				$this->printAttrs($refObj);
 				exit(1);
@@ -130,16 +131,12 @@ class Flags {
 		return function(object $inst, \ReflectionObject $refObj)use($propertyName, $value, $isDefault):mixed{
 			/** Check for a shadow method with the same name as the property. If it exists, call it with the value.*/
 			if( $refObj->hasMethod($propertyName)){
-				// if(is_null($value)){ // nullable default values will pass null as an arg and PHP doesn't like that
-				// 	return null;
-				// }
-
 				$method = $refObj->getMethod($propertyName);
 				return $method->invoke($inst, $value);
 			}
 			/** If the value was not set, throw an exception. */
 			if(empty($value) && !$isDefault){
-				throw new FlagsException("3 missing value for -{$propertyName}");
+				throw new FlagsException("missing value for -{$propertyName}");
 			}
 
 			/** If the shadow method does not exist, return the value. */
