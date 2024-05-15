@@ -36,7 +36,11 @@ class Flags {
 
 		foreach ($refObj->getProperties() as $param) {
 			try {
-				$param->setValue($this->cl, $this->getArgValue($this->cl, $param, $args));
+				$val = $this->getArgValue($this->cl, $param, $args);
+				if(is_callable($val)){
+					$val = $val($this->cl, $refObj);
+				}
+				$param->setValue($this->cl, $val);
 			}catch(FlagsException $e){
 				echo $e->getMessage() . PHP_EOL;
 				$this->printAttrs($refObj);
@@ -44,23 +48,13 @@ class Flags {
 			}
 		}
 
-		foreach (array_keys($args) as $val) {
-			if( $refObj->hasMethod($val) ){
-				$method = $refObj->getMethod($val);
-				try {
-					$param = $refObj->getProperty($method->getName());
-					$param->setValue($this->cl, $method->invoke($this->cl, $args[$method->getName()]));
-				}catch(\ReflectionException $e){
-					// ignore method overload property not found
-				}
-			}
-		}
 		return $this->cl;
 	}
 
 	private function getArgValue(object $obj, \ReflectionProperty $property, array $options):mixed{
 		foreach($options as $i => $arg){
 
+			// searching the given args for the property name
 			if(strpos($arg, "-{$property->getName()}") === 0 ||
 				strpos($arg, "--{$property->getName()}") === 0) {
 
@@ -113,7 +107,14 @@ class Flags {
 						settype($value, "string");
 						break;
 					default:
-						throw new FlagsException("unsupported type: {$type->getName()}");
+						$name = $property->getName();
+						return function(object $inst, \ReflectionObject $refObj)use($name, $value){
+							if( $refObj->hasMethod($name) ){
+								$method = $refObj->getMethod($name);
+								return $method->invoke($inst, $value);
+							}
+							return null;
+						};
 						break;
 
 				};

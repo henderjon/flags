@@ -4,10 +4,16 @@ require_once 'vendor/autoload.php';
 
 use Flags\FlagsAttributes\DocString;
 
+class user {
+	public function __construct(
+		public readonly string $name,
+	){}
+}
+
 #[DocString("Usage: example.php [options]")]
 class options {
 	#[DocString("foo is an arg")]
-	public string $foo;
+	public string $foo = "a string";
 
 	#[DocString("bar is another arg")]
 	public int $bar = 5;
@@ -16,11 +22,11 @@ class options {
 	public bool $fizz = false;
 
 	#[DocString("buzz is an arg with a shadow method")]
-	public string $buzz;
+	public ?user $human;
 
 	#[DocString("the value of buzz will get uppercased")]
-	public function buzz(string $v):string{
-		return strtoupper($v);
+	public function human(string $v):user{
+		return new user($v);
 	}
 }
 
