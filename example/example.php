@@ -13,10 +13,10 @@ class user {
 #[DocString("Usage: example.php [options]")]
 class options {
 	#[DocString("foo is an arg")]
-	public string $foo = "a string";
+	public string $foo = "a dsf";
 
 	#[DocString("bar is another arg")]
-	public int $bar = 5;
+	public array $bar = ["asdf" => 1, 2, 3];
 
 	#[DocString("fizz is a third arg")]
 	public bool $fizz = false;
@@ -42,7 +42,15 @@ class options {
 
 }
 
-$result = (new \Flags\Flags(new options))->parse($argv);
+try{
+	$flag = new \Flags\Flags(new options);
+	$result = $flag->parse($argv);
+}catch(\Flags\FlagsException $e){
+	echo $flag->getDocs();
+	exit(1);
+}
+
+
 var_dump($result);
 
 // $c = new class(){

@@ -31,7 +31,7 @@ class Flags {
 
 		$args = array_slice($args, 1); // remove script name
 		if(in_array("-help", $args) || in_array("--help", $args)){
-			$this->printAttrs($refObj);
+			throw new FlagsException("", $this->printAttrs($refObj));
 			exit(0);
 		}
 
@@ -40,15 +40,12 @@ class Flags {
 				$val = $this->getArgValue($this->cl, $param, $args)($this->cl, $refObj);
 				$param->setValue($this->cl, $val);
 			}catch(FlagsException $e){
-				echo $e->getMessage() . PHP_EOL;
-				$this->printAttrs($refObj);
-				exit(1);
+				throw new FlagsException($e->getMessage(), $this->printAttrs($refObj));
 			}catch(\Throwable $e){ // this should catch errors thrown by the shadow method
 				// echo $e->getMessage() . PHP_EOL;
 				// this error is long and verbose because the gotcha here is that contagious nullability of complex types' shadow methods
-				echo "missing function to convert value for -{$param->getName()} \nensure all types (including defaults) match \nif using nullables, ensure function accepts/returns nullable types" . PHP_EOL;
-				$this->printAttrs($refObj);
-				exit(1);
+				$new = "missing function to convert value for -{$param->getName()} \nensure all types (including defaults) match \nif using nullables, ensure function accepts/returns nullable types" . PHP_EOL;
+				throw new FlagsException($new, $this->printAttrs($refObj));
 			}
 		}
 
@@ -144,7 +141,12 @@ class Flags {
 		};
 	}
 
-	private function printAttrs(\ReflectionObject $refObj){
+	public function getDocs():string{
+		$refObj = new \ReflectionObject($this->cl);
+		return $this->printAttrs($refObj);
+	}
+
+	private function printAttrs(\ReflectionObject $refObj):string{
 		$doc = [];
 		$attr = $refObj->getAttributes(DocString::class);
 		if( !empty($attr) ){
@@ -153,48 +155,56 @@ class Flags {
 			$doc["usage"] = PHP_EOL."no usage provided";
 		}
 
-		foreach ($refObj->getProperties() as $param) {
+		foreach ($refObj->getProperties() as $property) {
 			$default = "";
-			if($param->hasDefaultValue()){
-				if($param->getType()->getName() == "bool"){
-					$default = "default: ".($param->getDefaultValue() ? "true" : "false");
-				}else{
-					$default = "default: {$param->getDefaultValue()}";
-				}
+			if($property->hasDefaultValue()){
+				$default = match($property->getType()->getName()){
+					"bool", "boolean" => "default: ".($property->getDefaultValue() ? "TRUE" : "FALSE"),
+					"string" => "default: \"".print_r($property->getDefaultValue(), true)."\"",
+					"int", "integer",
+					"double", "float" => "default: {$property->getDefaultValue()}",
+					"array" => "default: ".str_replace(["    ", "\n"], [" ", ""], print_r($property->getDefaultValue(), true))."",
+					"object" => "default: object",
+					"NULL" => "default: NULL",
+					default => "default: {$property->getDefaultValue()}",
+				};
 			}
 
 			$docString = "no documentation provided";
-			$attr = $param->getAttributes(DocString::class);
+			$attr = $property->getAttributes(DocString::class);
 			if( !empty($attr) ){
 				$docString = $attr[0]->newInstance()->doc;
 			}
 
 			$null = "";
-			if($param->getType()->allowsNull()){
+			if($property->getType()->allowsNull()){
 				$null = "?";
 			}
-			$doc[$param->getName()] = sprintf(
+			$doc[$property->getName()] = sprintf(
 				"-%s (%s%s) %s \n  %s",
-				$param->getName(),
+				$property->getName(),
 				$null,
-				$param->getType()->getName(),
+				$property->getType()->getName(),
 				$default,
 				$docString,
 			);
 		}
 
-		foreach ($refObj->getMethods() as $method) {
-			$docString = "";
-			$attr = $method->getAttributes(DocString::class);
-			if( !empty($attr) ){
-				$docString = "\n  (function) => {$attr[0]->newInstance()->doc}";
-			}
+		foreach($doc as $param => $msg){
+			if( $refObj->hasMethod($param)){
+				$docString = "";
+				$method = $refObj->getMethod($param);
+				$attr = $method->getAttributes(DocString::class);
+				if( !empty($attr) ){
+					$docString = "\n  (function) => {$attr[0]->newInstance()->doc}";
+				}
 
-			if(array_key_exists($method->getName(), $doc)){
-				$doc[$method->getName()] .= $docString;
+				if(array_key_exists($method->getName(), $doc)){
+					$doc[$method->getName()] .= $docString;
+				}
 			}
 		}
-		echo implode(PHP_EOL.PHP_EOL, $doc).PHP_EOL.PHP_EOL;
+		return implode(PHP_EOL.PHP_EOL, $doc).PHP_EOL.PHP_EOL;
 	}
 
 }
