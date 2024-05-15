@@ -28,18 +28,15 @@ class Flags {
 
 		$refObj = new \ReflectionObject($this->cl);
 
-		try {
-			$args = $this->preProcessArgs($args);
-		}catch(FlagsException $e){
-			echo $e->getMessage() . PHP_EOL;
+		$args = array_slice($args, 1); // remove script name
+		if(in_array("-help", $args) || in_array("--help", $args)){
 			$this->printAttrs($refObj);
-			exit(1);
+			exit(0);
 		}
 
-		$this->argv = [];
 		foreach ($refObj->getProperties() as $param) {
 			try {
-				$param->setValue($this->cl, $this->getParameterValue($this->cl, $param, $args));
+				$param->setValue($this->cl, $this->getArgValue($this->cl, $param, $args));
 			}catch(FlagsException $e){
 				echo $e->getMessage() . PHP_EOL;
 				$this->printAttrs($refObj);
@@ -54,73 +51,81 @@ class Flags {
 					$param = $refObj->getProperty($method->getName());
 					$param->setValue($this->cl, $method->invoke($this->cl, $args[$method->getName()]));
 				}catch(\ReflectionException $e){
-					// ignore property not found
+					// ignore method overload property not found
 				}
 			}
 		}
-
 		return $this->cl;
 	}
 
-	private function getParameterValue(object $obj, \ReflectionProperty $param, array $givenArgs):mixed{
-		if( !array_key_exists($param->getName(), $givenArgs) ){
-			if( !$param->hasDefaultValue() ){
-				throw new FlagsException("missing required parameter: {$param->getName()}");
-			}
+	private function getArgValue(object $obj, \ReflectionProperty $property, array $options):mixed{
+		foreach($options as $i => $arg){
 
-			return $param->getValue($obj);
-		}
+			if(strpos($arg, "-{$property->getName()}") === 0 ||
+				strpos($arg, "--{$property->getName()}") === 0) {
 
-		$type = $param->getType();
-		$v = $givenArgs[$param->getName()];
-		match($type->getName()){
-			"boolean", "bool",
-			"integer", "int",
-			"float", "double",
-			"string" => settype($v, $type->getName()),
-			default => throw new FlagsException("unsupported type: {$type->getName()}"),
-		};
+				// handle -foo=bar
+				if(false !== ($pos = strpos($arg, "="))){
+					$name = substr($arg, 0, $pos);
+					$value = substr($arg, ($pos + 1));
 
-		return $v;
-	}
+				// handle -foo
+				}else if($property->getType()->getName() == "boolean" ||
+					$property->getType()->getName() == "bool"){ // boolean flag must be set with '='
+						$value = true;
 
-	private function preProcessArgs(array $args):array{
-		$args = array_slice($args, 1); // remove script name
+				// handle -foo bar
+				}else if( array_key_exists($i+1, $options) ){
+					$value = $options[$i+1];
 
-		$final = [];
-		$previous = null;
-		while( $current = array_shift($args) ){
-
-			if($current == "-help" || $current == "--help"){
-				throw new FlagsException("!help requested");
-			}
-
-			// pairs with equal sign
-			if(false !== ($pos = strpos($current, "="))){
-				$key = substr($current, 0, $pos);
-				$final[ltrim($key, "-")] = substr($current, ($pos + 1));
-				continue;
-			}
-
-			if(str_starts_with($current, "-")){
-				// spaced bool
-				if(empty($previous) || (!empty($previous) && str_starts_with($previous, "-"))){
-					$final[ltrim($current, "-")] = true;
+				// something went wrong
+				}else {
+					throw new FlagsException("missing required -{$property->getName()}");
 				}
 
-				$previous = $current;
-				continue;
-			}
+				$type = $property->getType();
+				switch($type->getName()){
+					case "boolean":
+					case "bool":
+						if(strtolower($value) == "false" || $value == "0"){
+							$value = false;
+						}else if(strtolower($value) == "true" || $value == "1"){
+							$value = true;
+						}else{
+							throw new FlagsException("cannot parse '{$value}' as bool for -{$property->getName()}");
+						}
+						break;
+					case "integer":
+					case "int":
+						if(!ctype_digit($value)){
+							throw new FlagsException("cannot parse '{$value}' as int for -{$property->getName()}");
+						}
+						settype($value, "int");
+						break;
+					case "float":
+					case "double":
+						if(!is_numeric($value)){
+							throw new FlagsException("cannot parse '{$value}' as float for -{$property->getName()}");
+						}
+						settype($value, "float");
+						break;
+					case "string":
+						settype($value, "string");
+						break;
+					default:
+						throw new FlagsException("unsupported type: {$type->getName()}");
+						break;
 
-			// spaced value
-			if(!empty($previous) && str_starts_with($previous, "-")){
-				$final[ltrim($previous, "-")] = $current;
-				$previous = null;
-				continue;
+				};
+				return $value;
 			}
-
 		}
-		return $final;
+
+		if($property->hasDefaultValue()){
+			return $property->getValue($obj); // default values should already be typed
+		}
+
+		throw new FlagsException("missing value for -{$property->getName()}");
 	}
 
 	private function printAttrs(\ReflectionObject $refObj){
@@ -129,7 +134,7 @@ class Flags {
 		if( !empty($attr) ){
 			$doc["usage"] = PHP_EOL."{$attr[0]->newInstance()->doc}";
 		}else{
-			$doc["usage"] = PHP_EOL."!no usage provided";
+			$doc["usage"] = PHP_EOL."no usage provided";
 		}
 
 		foreach ($refObj->getProperties() as $param) {
@@ -142,7 +147,7 @@ class Flags {
 				}
 			}
 
-			$docString = "!no documentation provided";
+			$docString = "no documentation provided";
 			$attr = $param->getAttributes(DocString::class);
 			if( !empty($attr) ){
 				$docString = $attr[0]->newInstance()->doc;
@@ -168,7 +173,7 @@ class Flags {
 				$doc[$method->getName()] .= $docString;
 			}
 		}
-		echo implode(PHP_EOL.PHP_EOL, $doc).PHP_EOL;
+		echo implode(PHP_EOL.PHP_EOL, $doc).PHP_EOL.PHP_EOL;
 	}
 
 }

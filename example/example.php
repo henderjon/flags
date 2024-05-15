@@ -25,4 +25,4 @@ class options {
 }
 
 $options = (new Flags\Flags(new options))->parse($argv);
-var_dump($options->getAll());
+var_dump($options);

@@ -1,7 +1,7 @@
 TODO
 [√] handle bools
 
-```
+```php
 function simple_scan_args(array $_argv, array $values, array $flags = array()){
 
 	// $values = array_fill_keys($values, false);
