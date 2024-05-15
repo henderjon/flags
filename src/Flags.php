@@ -8,6 +8,7 @@ use Flags\FlagsAttributes\DocString;
  * Flags is a simple command-line flag parser.
  */
 class Flags {
+	private const NULL_PLACEHOLDER = "NULL";
 	private ?array $argv = null;
 
 	public function __construct(
@@ -36,13 +37,15 @@ class Flags {
 
 		foreach ($refObj->getProperties() as $param) {
 			try {
-				$val = $this->getArgValue($this->cl, $param, $args);
-				if(is_callable($val)){
-					$val = $val($this->cl, $refObj);
-				}
+				$val = $this->getArgValue($this->cl, $param, $args)($this->cl, $refObj);
 				$param->setValue($this->cl, $val);
 			}catch(FlagsException $e){
 				echo $e->getMessage() . PHP_EOL;
+				$this->printAttrs($refObj);
+				exit(1);
+			}catch(\Throwable $e){ // this should catch errors thrown by the shadow method
+				// echo $e->getMessage() . PHP_EOL;
+				echo "missing function to convert value for -{$param->getName()} \nensure all types (including defaults) match \nif using nullables, ensure function accepts/returns nullable types" . PHP_EOL;
 				$this->printAttrs($refObj);
 				exit(1);
 			}
@@ -51,7 +54,7 @@ class Flags {
 		return $this->cl;
 	}
 
-	private function getArgValue(object $obj, \ReflectionProperty $property, array $options):mixed{
+	private function getArgValue(object $obj, \ReflectionProperty $property, array $options):callable{
 		foreach($options as $i => $arg){
 
 			// searching the given args for the property name
@@ -63,12 +66,12 @@ class Flags {
 					$name = substr($arg, 0, $pos);
 					$value = substr($arg, ($pos + 1));
 
-				// handle -foo
+				// handle -foo; boolean values must be set with '='
 				}else if($property->getType()->getName() == "boolean" ||
-					$property->getType()->getName() == "bool"){ // boolean flag must be set with '='
+					$property->getType()->getName() == "bool"){
 						$value = true;
 
-				// handle -foo bar
+				// handle -foo bar; NOT for bools
 				}else if( array_key_exists($i+1, $options) ){
 					$value = $options[$i+1];
 
@@ -107,26 +110,41 @@ class Flags {
 						settype($value, "string");
 						break;
 					default:
-						$name = $property->getName();
-						return function(object $inst, \ReflectionObject $refObj)use($name, $value){
-							if( $refObj->hasMethod($name) ){
-								$method = $refObj->getMethod($name);
-								return $method->invoke($inst, $value);
-							}
-							return null;
-						};
+						// if the type is not a primitive, we assume there is a shadow method
 						break;
 
 				};
-				return $value;
+				return $this->getShadowCallback($property->getName(), $value, $property->isDefault());
 			}
 		}
 
 		if($property->hasDefaultValue()){
-			return $property->getValue($obj); // default values should already be typed
+			// default values should already be typed
+			return $this->getShadowCallback($property->getName(), $property->getValue($obj), $property->isDefault());
 		}
 
 		throw new FlagsException("missing value for -{$property->getName()}");
+	}
+
+	private function getShadowCallback(string $propertyName, mixed $value, bool $isDefault):callable{
+		return function(object $inst, \ReflectionObject $refObj)use($propertyName, $value, $isDefault):mixed{
+			/** Check for a shadow method with the same name as the property. If it exists, call it with the value.*/
+			if( $refObj->hasMethod($propertyName)){
+				// if(is_null($value)){ // nullable default values will pass null as an arg and PHP doesn't like that
+				// 	return null;
+				// }
+
+				$method = $refObj->getMethod($propertyName);
+				return $method->invoke($inst, $value);
+			}
+			/** If the value was not set, throw an exception. */
+			if(empty($value) && !$isDefault){
+				throw new FlagsException("3 missing value for -{$propertyName}");
+			}
+
+			/** If the shadow method does not exist, return the value. */
+			return $value;
+		};
 	}
 
 	private function printAttrs(\ReflectionObject $refObj){
@@ -154,9 +172,14 @@ class Flags {
 				$docString = $attr[0]->newInstance()->doc;
 			}
 
+			$null = "";
+			if($param->getType()->allowsNull()){
+				$null = "?";
+			}
 			$doc[$param->getName()] = sprintf(
-				"-%s (%s) %s \n  %s",
+				"-%s (%s%s) %s \n  %s",
 				$param->getName(),
+				$null,
 				$param->getType()->getName(),
 				$default,
 				$docString,
@@ -167,7 +190,7 @@ class Flags {
 			$docString = "";
 			$attr = $method->getAttributes(DocString::class);
 			if( !empty($attr) ){
-				$docString = "\n  {$attr[0]->newInstance()->doc}";
+				$docString = "\n  (function) => {$attr[0]->newInstance()->doc}";
 			}
 
 			if(array_key_exists($method->getName(), $doc)){
