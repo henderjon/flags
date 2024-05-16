@@ -1,7 +1,5 @@
 <?php
 
-require_once "vendor/autoload.php";
-
 class user {
 	public function __construct(
 		public readonly string $name,
