@@ -117,7 +117,7 @@ class Flags {
 		}
 
 		if($property->hasDefaultValue()){
-			// default values should already be typed
+			// default values should already be typed; might not need to re-assign it ... ?
 			return $this->getShadowCallback($property->getName(), $property->getValue($obj), $property->isDefault());
 		}
 
