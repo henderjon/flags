@@ -47,6 +47,8 @@ try{
 	$result = $flag->parse($argv);
 }catch(\Flags\FlagsException $e){
 	echo $flag->getDocs();
+	echo $e->getMessage();
+	// echo $flag->getDocs();
 	exit(1);
 }
 
