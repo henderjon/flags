@@ -2,3 +2,4 @@ vendor/*
 example/*
 !example/example.php
 .phpunit.*
+composer.lock
