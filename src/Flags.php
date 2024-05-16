@@ -39,16 +39,7 @@ class Flags {
 			try {
 				$val = $this->getArgValue($this->cl, $param, $args)($this->cl, $refObj);
 				$param->setValue($this->cl, $val);
-			// }catch(FlagsException $e){
-			// 	throw new FlagsException($e->getMessage().PHP_EOL, $this->printAttrs($refObj));
-			// }catch(\ErrorException $e){
-			// 	throw new FlagsException($e->getMessage());
-			// }catch(\Error $e){
-			// 	throw new FlagsException($e->getMessage());
 			}catch(\Throwable $e){ // this should catch errors thrown by the shadow method
-				// echo $e->getMessage() . PHP_EOL;
-				// this error is long and verbose because the gotcha here is that contagious nullability of complex types' shadow methods
-				// $new = "missing function to convert value for -{$param->getName()} \nensure all types (including defaults) match \nif using nullables, ensure function accepts/returns nullable types" . PHP_EOL;
 				throw new FlagsException($e->getMessage().PHP_EOL, $this->printAttrs($refObj));
 			}
 		}
