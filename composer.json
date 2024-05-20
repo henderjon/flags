@@ -12,7 +12,8 @@
 		}
 	],
 	"require": {
-		"php"     : ">=8.1"
+		"php"      : ">=8.1",
+		"ext-ctype": "*"
 	},
 	"require-dev": {
 		"henderjon/drop": "^1.3",
