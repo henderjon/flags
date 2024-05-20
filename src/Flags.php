@@ -8,7 +8,6 @@ use Flags\FlagsAttributes\DocString;
  * Flags is a simple command-line flag parser.
  */
 class Flags {
-	private const NULL_PLACEHOLDER = "NULL";
 	private ?array $argv = null;
 
 	public function __construct(
