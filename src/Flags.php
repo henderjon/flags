@@ -153,14 +153,14 @@ class Flags {
 			$default = "";
 			if($property->hasDefaultValue()){
 				$default = match($property->getType()->getName()){
-					"bool", "boolean" => "default: ".($property->getDefaultValue() ? "TRUE" : "FALSE"),
-					"string" => "default: \"".print_r($property->getDefaultValue(), true)."\"",
 					"int", "integer",
 					"double", "float" => "default: {$property->getDefaultValue()}",
-					"array" => "default: ".str_replace(["    ", "\n"], [" ", ""], print_r($property->getDefaultValue(), true))."",
+					"bool", "boolean" => "default: ".($property->getDefaultValue() ? "TRUE" : "FALSE"),
+					"string" => "default: \"".print_r($property->getDefaultValue(), true)."\"", // why am I print_r-ing this?
+					"array"  => "default: ".str_replace(["    ", "\n"], [" ", ""], print_r($property->getDefaultValue(), true))."",
 					"object" => "default: object",
-					"NULL" => "default: NULL",
-					default => "default: {$property->getDefaultValue()}",
+					"NULL"   => "default: NULL",
+					default  => "default: {$property->getDefaultValue()}",
 				};
 			}
 
