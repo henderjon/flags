@@ -1,5 +1,9 @@
 # flags
 
+Flags takes an object, parses it's properties and methods and evaluates a given array (e.g. $argv) and populates the object with the given array.
+
+Flags uses Attributes to parse/echo documentation.
+
 For example usage, see the [example](example/example.php)
 
 ## special cases

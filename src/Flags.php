@@ -17,18 +17,18 @@ class Flags {
 	/**
 	 * Parse the given arguments and return an object with the parsed flags. In
 	 * Practice, this method should accept $argv from the main script.
-	 *
-	 * @param array $args
-	 * @return object
 	 */
-	public function parse(array $args): object {
+	public function parse(array $args, bool $sName = true): object {
 		if(!is_null($this->argv)){
 			return $this->argv;
 		}
 
 		$refObj = new \ReflectionObject($this->cl);
 
-		$args = array_slice($args, 1); // remove script name
+		if($sName){
+			$args = array_slice($args, 1); // remove script name
+		}
+
 		if(in_array("-help", $args) || in_array("--help", $args)){
 			throw new FlagsException("", $this->printAttrs($refObj));
 			exit(0);
