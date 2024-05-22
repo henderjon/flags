@@ -57,6 +57,9 @@ class Flags {
 				if(false !== ($pos = strpos($arg, "="))){
 					$name = substr($arg, 0, $pos);
 					$value = substr($arg, ($pos + 1));
+					if(!$value){
+						throw new FlagsException("missing value for -{$property->getName()}");
+					}
 
 				// handle -foo; boolean values must be set with '='
 				}else if($property->getType()->getName() == "boolean" ||
@@ -65,6 +68,9 @@ class Flags {
 
 				// handle -foo bar; NOT for bools
 				}else if( array_key_exists($i+1, $options) ){
+					if($options[$i+1][0] == "-"){
+						throw new FlagsException("missing value for -{$property->getName()}; to pass a value that starts with a dash, use the '=' syntax: -{$property->getName()}=value");
+					}
 					$value = $options[$i+1];
 
 				// something went wrong
