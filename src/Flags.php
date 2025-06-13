@@ -3,27 +3,59 @@
 namespace Flags;
 
 use Flags\FlagsAttributes\DocString;
+use ReflectionObject;
+use ReflectionProperty;
+use Throwable;
 
 /**
  * Flags is a simple command-line flag parser.
+ *
+ * Given an object whose properties represent the possible/expected args for the parent script. Use the Attribute
+ * `DocString` to provide documentation to a given script.
+ *
+ * bool, int, float, and string are all supported as is including being nullable.
+ *
+ * To process more complicated types or parse the values of the types listed above, a "shadow method"
+ * can be provided meaning that a method whose name is identical to that of the property that takes
+ * the value providee as an arg and returns the value post-processing. This can be used for simple
+ * text processing (this "foo,bar,buzz" into an array) or instantiating a more complex object.
+ *
+ * All values should have a value of some kind. Null can be used as a "not set" default if need be.
+ *
+ * Special notes:
+ * - To set a bool true simply use it (e.g. -var). To set its value it is required to use the equal sign (e.g. -var=false)
+ * - The args `-help` or `--help` will always print DocStings
+ * - When combing custom types, nullables, default values, and shadow methods, it can be tricky to make sure that
+ *   everything that OUGHT to be nullable, is so
+ * - errors/exception in the vein of Argument #1 ($v) must be of type $TYPE, null given that means that the expected
+ *   type of the property, shadow function parameter, and shadow function return type don't match. Specifically,
+ *   nullable types require everything else to be nullable, especially when it's a complex type that is nullable and
+ *   defaults to null as a value.
+ *
  */
 class Flags {
 	private ?array $argv = null;
 
+    /**
+     * @param object $cl This object represents the potential args for the parent script.
+     */
 	public function __construct(
 		private readonly object $cl,
 	) {}
 
 	/**
 	 * Parse the given arguments and return an object with the parsed flags. In
-	 * Practice, this method should accept $argv from the main script.
+	 * practice, this method should accept $argv from the main script. If not,
+     * there is a flag to ignore the first key in the array (what would have been
+     * the script name).
 	 */
-	public function parse(array $args, bool $sName = true): object {
+	public function parse(array $args, bool $sName = true): array|object {
+        // don't parse twice
 		if(!is_null($this->argv)){
 			return $this->argv;
 		}
 
-		$refObj = new \ReflectionObject($this->cl);
+		$refObj = new ReflectionObject($this->cl);
 
 		if($sName){
 			$args = array_slice($args, 1); // remove script name
@@ -31,14 +63,13 @@ class Flags {
 
 		if(in_array("-help", $args) || in_array("--help", $args)){
 			throw new FlagsException("", $this->printAttrs($refObj));
-			exit(0);
 		}
 
 		foreach ($refObj->getProperties() as $param) {
 			try {
 				$val = $this->getArgValue($this->cl, $param, $args)($this->cl, $refObj);
 				$param->setValue($this->cl, $val);
-			}catch(\Throwable $e){ // this should catch errors thrown by the shadow method
+			}catch(Throwable $e){ // this should catch errors thrown by the shadow method
 				throw new FlagsException($e->getMessage().PHP_EOL, $this->printAttrs($refObj));
 			}
 		}
@@ -46,29 +77,29 @@ class Flags {
 		return $this->cl;
 	}
 
-	private function getArgValue(object $obj, \ReflectionProperty $property, array $options):callable{
+	private function getArgValue(object $obj, ReflectionProperty $property, array $options):callable{
 		foreach($options as $i => $arg){
 
 			// searching the given args for the property name
-			if(strpos($arg, "-{$property->getName()}") === 0 ||
-				strpos($arg, "--{$property->getName()}") === 0) {
+			if(str_starts_with($arg, "-{$property->getName()}") ||
+                str_starts_with($arg, "--{$property->getName()}")) {
 
 				// handle -foo=bar
 				if(false !== ($pos = strpos($arg, "="))){
-					$name = substr($arg, 0, $pos);
+//					$name = substr($arg, 0, $pos);
 					$value = substr($arg, ($pos + 1));
 					if(!$value){
 						throw new FlagsException("missing value for -{$property->getName()}");
 					}
 
 				// handle -foo; boolean values must be set with '='
-				}else if($property->getType()->getName() == "boolean" ||
-					$property->getType()->getName() == "bool"){
+				}else if($property->getType()?->getName() === "boolean" ||
+					$property->getType()?->getName() === "bool"){
 						$value = true;
 
-				// handle -foo bar; NOT for bools
+				// handle -foo bar; NOT for bool
 				}else if( array_key_exists($i+1, $options) ){
-					if($options[$i+1][0] == "-"){
+					if($options[$i+1][0] === "-"){
 						throw new FlagsException("missing value for -{$property->getName()}; to pass a value that starts with a dash, use the '=' syntax: -{$property->getName()}=value");
 					}
 					$value = $options[$i+1];
@@ -79,40 +110,40 @@ class Flags {
 				}
 
 				$type = $property->getType();
-				switch($type->getName()){
+				switch($type?->getName()){
 					case "boolean":
 					case "bool":
-						if(strtolower($value) == "false" || $value == "0"){
-							$value = false;
-						}else if(strtolower($value) == "true" || $value == "1"){
-							$value = true;
-						}else{
-							throw new FlagsException("cannot parse '{$value}' as bool for -{$property->getName()}");
-						}
+                        $value = match(true){
+                            is_bool($value) => $value, // handle -foo; previously set
+                            strtolower($value) === "false", $value === "0" => false, // handle -foo=false
+                            strtolower($value) === "true", $value === "1" => true, // handle -foo=true
+                            default => throw new FlagsException("cannot parse '{$value}' as bool for -{$property->getName()}"),
+                        };
+
 						break;
 					case "integer":
 					case "int":
 						if(!ctype_digit($value)){
 							throw new FlagsException("cannot parse '{$value}' as int for -{$property->getName()}");
 						}
-						settype($value, "int");
+						$value = (int)$value;
 						break;
 					case "float":
 					case "double":
 						if(!is_numeric($value)){
 							throw new FlagsException("cannot parse '{$value}' as float for -{$property->getName()}");
 						}
-						settype($value, "float");
+						$value = (float)$value;
 						break;
 					case "string":
-						settype($value, "string");
+						$value = (string)$value;
 						break;
 					default:
 						// if the type is not a primitive, we assume there is a shadow method
 						break;
 
-				};
-				return $this->getShadowCallback($property->getName(), $value, $property->isDefault());
+				}
+                return $this->getShadowCallback($property->getName(), $value, $property->isDefault());
 			}
 		}
 
@@ -125,11 +156,10 @@ class Flags {
 	}
 
 	private function getShadowCallback(string $propertyName, mixed $value, bool $isDefault):callable{
-		return function(object $inst, \ReflectionObject $refObj)use($propertyName, $value, $isDefault):mixed{
+		return static function(object $inst, ReflectionObject $refObj)use($propertyName, $value, $isDefault):mixed{
 			/** Check for a shadow method with the same name as the property. If it exists, call it with the value.*/
 			if( $refObj->hasMethod($propertyName)){
-				$method = $refObj->getMethod($propertyName);
-				return $method->invoke($inst, $value);
+                return $refObj->getMethod($propertyName)->invoke($inst, $value);
 			}
 			/** If the value was not set, throw an exception. */
 			if(empty($value) && !$isDefault){
@@ -141,16 +171,20 @@ class Flags {
 		};
 	}
 
+    /**
+     * getDocs pretty prints the expected args based on the shape of the object given to __construct()
+     * @return string
+     */
 	public function getDocs():string{
-		$refObj = new \ReflectionObject($this->cl);
+		$refObj = new ReflectionObject($this->cl);
 		return $this->printAttrs($refObj);
 	}
 
-	private function printAttrs(\ReflectionObject $refObj):string{
+	private function printAttrs(ReflectionObject $refObj):string{
 		$doc = [];
 		$attr = $refObj->getAttributes(DocString::class);
 		if( !empty($attr) ){
-			$doc["usage"] = PHP_EOL."{$attr[0]->newInstance()->doc}";
+			$doc["usage"] = PHP_EOL. ($attr[0]->newInstance()->doc);
 		}else{
 			$doc["usage"] = PHP_EOL."no usage provided";
 		}
@@ -158,12 +192,12 @@ class Flags {
 		foreach ($refObj->getProperties() as $property) {
 			$default = "";
 			if($property->hasDefaultValue()){
-				$default = match($property->getType()->getName()){
+				$default = match($property->getType()?->getName()){
 					"int", "integer",
 					"double", "float" => "default: {$property->getDefaultValue()}",
 					"bool", "boolean" => "default: ".($property->getDefaultValue() ? "TRUE" : "FALSE"),
 					"string" => "default: \"".print_r($property->getDefaultValue(), true)."\"", // why am I print_r-ing this?
-					"array"  => "default: ".str_replace(["    ", "\n"], [" ", ""], print_r($property->getDefaultValue(), true))."",
+					"array"  => "default: ".str_replace(["    ", "\n"], [" ", ""], print_r($property->getDefaultValue(), true)),
 					"object" => "default: object",
 					"NULL"   => "default: NULL",
 					default  => "default: {$property->getDefaultValue()}",
@@ -177,14 +211,15 @@ class Flags {
 			}
 
 			$null = "";
-			if($property->getType()->allowsNull()){
+			if($property->getType()?->allowsNull()){
 				$null = "?";
 			}
-			$doc[$property->getName()] = sprintf(
+            $propertyName = $property->getName();
+			$doc[$propertyName] = sprintf(
 				"-%s (%s%s) %s \n  %s",
-				$property->getName(),
+                $propertyName,
 				$null,
-				$property->getType()->getName(),
+				$property->getType()?->getName(),
 				$default,
 				$docString,
 			);
