@@ -175,12 +175,12 @@ class Flags {
      * getDocs pretty prints the expected args based on the shape of the object given to __construct()
      * @return string
      */
-	public function getDocs():string{
+	public function getDocs(string $message = ""):string{
 		$refObj = new ReflectionObject($this->cl);
-		return $this->printAttrs($refObj);
+		return $this->printAttrs($refObj, $message);
 	}
 
-	private function printAttrs(ReflectionObject $refObj):string{
+	private function printAttrs(ReflectionObject $refObj, string $message = ""):string{
 		$doc = [];
 		$attr = $refObj->getAttributes(DocString::class);
 		if( !empty($attr) ){
@@ -239,6 +239,11 @@ class Flags {
 				}
 			}
 		}
+
+        if($message){
+            $doc["additional"] = sprintf("-----".PHP_EOL."%s", $message);
+        }
+
 		return implode(PHP_EOL.PHP_EOL, $doc).PHP_EOL.PHP_EOL;
 	}
 
