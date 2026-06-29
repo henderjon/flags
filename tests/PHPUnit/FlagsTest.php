@@ -22,7 +22,7 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 
 		$given = ["script-name", "-foo", "bar", "-fizz=buzz", "-soup", "-taco", "7"];
 
-		$result = (new \Flags\Flags($c))->parse($given);
+		$result = (new \henderjon\Flags($c))->parse($given);
 		// check the return value
 		$this->assertSame("bar", $result->foo);
 		$this->assertSame("buzz", $result->fizz);
@@ -58,7 +58,7 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 
 		$given = ["script-name", "-person", "jack", "-spouse", "jill"];
 
-		$result = (new \Flags\Flags($c))->parse($given);
+		$result = (new \henderjon\Flags($c))->parse($given);
 		// check the return value
 		$this->assertEquals(new user("jack"), $result->person);
 		$this->assertEquals(new user("jill"), $result->spouse);
@@ -91,7 +91,7 @@ class FlagsTest extends PHPUnit\Framework\TestCase {
 
 		$given = ["script-name", "-person", "jack", "--age", "5"];
 
-		$result = (new \Flags\Flags($c))->parse($given);
+		$result = (new \henderjon\Flags($c))->parse($given);
 		// check the return value
 		$this->assertEquals(new user("jack"), $result->person);
 		$this->assertSame(10, $result->age);

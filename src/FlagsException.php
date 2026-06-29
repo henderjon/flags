@@ -1,6 +1,6 @@
 <?php
 
-namespace Flags;
+namespace henderjon;
 
 class FlagsException extends \Exception {
 	public function __construct(

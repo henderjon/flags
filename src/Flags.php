@@ -1,8 +1,8 @@
 <?php
 
-namespace Flags;
+namespace henderjon;
 
-use Flags\FlagsAttributes\DocString;
+use henderjon\FlagsAttributes\DocString;
 use ReflectionObject;
 use ReflectionProperty;
 use Throwable;

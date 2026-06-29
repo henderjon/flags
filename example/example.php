@@ -2,7 +2,7 @@
 
 require_once 'vendor/autoload.php';
 
-use Flags\FlagsAttributes\DocString;
+use henderjon\FlagsAttributes\DocString;
 
 class user {
 	public function __construct(
@@ -43,9 +43,9 @@ class options {
 }
 
 try{
-	$flag = new \Flags\Flags(new options);
+	$flag = new \henderjon\Flags(new options);
 	$result = $flag->parse($argv);
-}catch(\Flags\FlagsException $e){
+}catch(\henderjon\FlagsException $e){
 	echo $flag->getDocs($e->getMessage());
 	// echo $flag->getDocs();
 	exit(1);

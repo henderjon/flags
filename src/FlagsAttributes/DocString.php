@@ -1,6 +1,6 @@
 <?php
 
-namespace Flags\FlagsAttributes;
+namespace henderjon\FlagsAttributes;
 
 #[\Attribute]
 class DocString {
